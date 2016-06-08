@@ -1,4 +1,4 @@
-module Sudoku where
+module Sudoku (Sudoku, readSudoku, printSudoku, solve) where
 
 import Data.List
 import Data.Char
@@ -79,25 +79,35 @@ isOkay x = and . map isOkayBlock $ blocks x
 type Pos = (Int,Int)
 
 blank :: Sudoku -> Pos
-blank (Sudoku rs) = (fst tuple, fst . snd $ tuple) where 
-    tuple = head . dropWhile (\(_,x) -> x==[]) . zip [1..9::Int] $ head . map (dropWhile (\(_,x) -> x/=Nothing)) .zip [1..9::Int] $ rs
+blank (Sudoku rs) = (fst tuple, fst . head . snd $ tuple) where 
+    tuple = head . dropWhile (\(_,x) -> x==[]) . zip [1..9::Int] $ map (dropWhile (\(_,x) -> x/=Nothing)) $ map (zip [1..9::Int]) rs
 
 (!!=) :: [a] -> (Int,a) -> [a]
-(!!=) = undefined
+(!!=) xs (k,val) = let  
+                     split = splitAt k xs
+                     beg = fst split
+                     end = tail . snd $ split
+            in beg ++ val : end 
 
 update :: Sudoku -> Pos -> Maybe Int -> Sudoku
-update = undefined
+update (Sudoku rs) (i,j) val = let
+                     split = splitAt i rs
+                     beg = fst split
+                     mid = head . snd $ split
+                     end = tail . snd $ split
+            in Sudoku $ beg ++ mid !!= (j,val) : end
+                                
 
 -------------------------------------------------------------------------
 
 solve :: Sudoku -> Maybe Sudoku
-solve s | undefined = Nothing  -- There's a violation in s
-        | undefined = Just s   -- s is already solved
+solve s | not (isSudoku s && isOkay s) = Nothing  -- There's a violation in s
+        | isSolved s = Just s   -- s is already solved
         | otherwise = pickASolution possibleSolutions
   where
-    nineUpdatedSuds   = undefined :: [Sudoku]
+    nineUpdatedSuds   = [update s (blank s) i | i <- fmap Just [1..9::Int]] :: [Sudoku]
     possibleSolutions = [solve s' | s' <- nineUpdatedSuds]
 
 pickASolution :: [Maybe Sudoku] -> Maybe Sudoku
-pickASolution suds = undefined
+pickASolution suds = head . dropWhile (==Nothing) $ suds
 
