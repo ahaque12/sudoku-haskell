@@ -80,7 +80,7 @@ type Pos = (Int,Int)
 
 blank :: Sudoku -> Pos
 blank (Sudoku rs) = (fst tuple, fst . head . snd $ tuple) where 
-    tuple = head . dropWhile (\(_,x) -> x==[]) . zip [1..9::Int] $ map (dropWhile (\(_,x) -> x/=Nothing)) $ map (zip [1..9::Int]) rs
+    tuple = head . dropWhile (\(_,x) -> x==[]) . zip [0..8::Int] $ map (dropWhile (\(_,x) -> x/=Nothing)) $ map (zip [0..8::Int]) rs
 
 (!!=) :: [a] -> (Int,a) -> [a]
 (!!=) xs (k,val) = let  
@@ -109,5 +109,8 @@ solve s | not (isSudoku s && isOkay s) = Nothing  -- There's a violation in s
     possibleSolutions = [solve s' | s' <- nineUpdatedSuds]
 
 pickASolution :: [Maybe Sudoku] -> Maybe Sudoku
-pickASolution suds = head . dropWhile (==Nothing) $ suds
-
+pickASolution suds  
+    | length xs == 0 = Nothing
+    | otherwise      = head xs
+    where
+        xs = dropWhile (==Nothing) suds 
