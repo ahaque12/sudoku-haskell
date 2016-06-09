@@ -100,6 +100,35 @@ update (Sudoku rs) (i,j) val = let
 
 -------------------------------------------------------------------------
 
+missingVal :: Block -> Int
+missingVal [] = 45
+missingVal (Nothing:xs) = missingVal xs
+missingVal ((Just x):xs) = missingVal xs - x
+
+missingOne :: Block -> Bool
+missingOne x = (==1) . length . filter (==Nothing) $ x
+
+missingPos :: Block -> Int
+missingPos x = fst . head . filter cond $ zip [0..27::Int] x where
+    cond :: (Int, Maybe Int) -> Bool
+    cond (_,val) = val == Nothing
+
+propogate :: Sudoku -> Sudoku
+propogate sud = undefined {- 
+    | length zipped == 0       = sud
+    | fst . head $ zipped < 9  = propogate $ update sud (
+    | fst . head $ zipped < 18 = propogate $ update sud (
+    | otherwise                = 
+    where
+      blk = filter missingVal . blocks $ sud
+      zipped = zip [0..27::Int] blk
+       pos 
+         | 
+         | otherwise = missingPos 
+-}
+
+-------------------------------------------------------------------------
+
 solve :: Sudoku -> Maybe Sudoku
 solve s | not (isSudoku s && isOkay s) = Nothing  -- There's a violation in s
         | isSolved s = Just s   -- s is already solved
