@@ -2,6 +2,7 @@ module Sudoku (Sudoku, readSudoku, printSudoku, solve) where
 
 import Data.List
 import Data.Char
+import Data.Maybe
 import Test.QuickCheck
 
 -------------------------------------------------------------------------
@@ -100,40 +101,70 @@ update (Sudoku rs) (i,j) val = let
 
 -------------------------------------------------------------------------
 
-missingVal :: Block -> Int
-missingVal [] = 45
-missingVal (Nothing:xs) = missingVal xs
-missingVal ((Just x):xs) = missingVal xs - x
+-- Get column x from sudoku s (used in Assignment X below)
+column :: Int -> Sudoku -> Block
+column x s = transpose (rows s) !! x
 
-missingOne :: Block -> Bool
-missingOne x = (==1) . length . filter (==Nothing) $ x
+-- Get row x from sudoku s (used in Assignment X below)
+row :: Int -> Sudoku -> Block
+row x s = (rows s) !! x
 
-missingPos :: Block -> Int
-missingPos x = fst . head . filter cond $ zip [0..27::Int] x where
-    cond :: (Int, Maybe Int) -> Bool
-    cond (_,val) = val == Nothing
+-- Get square (x,y), 0 <= x,y <= 2 from sudoku s
+square :: (Int, Int) -> Sudoku -> Block
+square (x,y) s = 
+      concat
+      $ [take 3 (drop (x*3) row) | row <- take 3 (drop (y*3) (rows s))]
 
-propogate :: Sudoku -> Sudoku
-propogate sud = undefined {- 
-    | length zipped == 0       = sud
-    | fst . head $ zipped < 9  = propogate $ update sud (
-    | fst . head $ zipped < 18 = propogate $ update sud (
-    | otherwise                = 
-    where
-      blk = filter missingVal . blocks $ sud
-      zipped = zip [0..27::Int] blk
-       pos 
-         | 
-         | otherwise = missingPos 
--}
+-- This function calculates the number of free spaces in the given blocks
+-- and zips it with the index
+blanksInBlocks :: Sudoku -> [(Int,Int)]
+blanksInBlocks s = [ (n, blanksInBlock b) | (b,n) <- zip (blocks s) [0..] ]
+                        
+blanksInBlock :: Block -> Int
+blanksInBlock bl = length (filter (== Nothing) bl)
+
+-- Propagate sudoku
+-- Returns Nothing if not able to propagate, otherwise
+-- 1) finds the first block with only 1 free spot
+-- 2) calculates the index in block and corresponding value
+propagate :: Sudoku -> Maybe Sudoku
+propagate s | length availBlocks == 0 = Nothing
+            | otherwise = propagateBlock s (fst $ head availBlocks) where
+    availBlocks = filter (\p -> snd p == 1) (blanksInBlocks s) 
+    propagateBlock s n | n < 9     = Just (propagateRow s n)
+                       | n < 18    = Just (propagateColumn s (n-9))
+                       | otherwise = Just (propagateSquare s (n-18)) where
+        idx = missingInBlockIndex
+        val = missingInBlock
+        propagateRow s k    = update s (k,idx (row k s)) (Just (val (row k s)))
+        propagateColumn s k = update s (idx (column k s),k) (Just (val (column k s)))
+        propagateSquare s k = update s (y, x) (Just (val sq)) where
+            sq = square (mod k 3, div k 3) s
+            y  = 3*(div k 3) + (div (idx sq) 3)
+            x  = 3*(mod k 3) + (mod (idx sq) 3)
+
+-- Finds the index of the first "Nothing" in a block
+missingInBlockIndex b = 
+    snd $
+    head $ 
+    filter (\p -> fst p == Nothing) $
+    zip b [0..8]
+
+-- Calculates the value that should be instead of the "Nothing" in a block
+missingInBlock :: Block -> Int
+missingInBlock b = maxInBlock - (foldl (+) 0 (map (fromMaybe 0) b)) where
+    maxInBlock = foldl (+) 0 [1..9]
 
 -------------------------------------------------------------------------
 
 solve :: Sudoku -> Maybe Sudoku
 solve s | not (isSudoku s && isOkay s) = Nothing  -- There's a violation in s
         | isSolved s = Just s   -- s is already solved
+        | propagated /= Nothing = solve $ fromJust propagated
         | otherwise = pickASolution possibleSolutions
   where
+    propagated :: Maybe Sudoku
+    propagated = Nothing -- propagate s
     nineUpdatedSuds   = [update s (blank s) i | i <- fmap Just [1..9::Int]] :: [Sudoku]
     possibleSolutions = [solve s' | s' <- nineUpdatedSuds]
 
